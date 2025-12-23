@@ -33,37 +33,30 @@
         }
       }
     },
-    "sample": {
+    "demo": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
           "style": "scss"
         }
       },
-      "root": "projects/sample",
-      "sourceRoot": "projects/sample/src",
+      "root": "projects/demo",
+      "sourceRoot": "projects/demo/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "browser": "projects/sample/src/main.ts",
-            "tsConfig": "projects/sample/tsconfig.app.json",
+            "browser": "projects/demo/src/main.ts",
+            "tsConfig": "projects/demo/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "projects/sample/public"
+                "input": "projects/demo/public"
               }
             ],
-            "styles": [
-              "projects/sample/src/styles.scss"
-            ],
-            "server": "projects/sample/src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "projects/sample/src/server.ts"
-            }
+            "styles": ["projects/demo/src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -93,10 +86,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "sample:build:production"
+              "buildTarget": "demo:build:production"
             },
             "development": {
-              "buildTarget": "sample:build:development"
+              "buildTarget": "demo:build:development"
             }
           },
           "defaultConfiguration": "development"

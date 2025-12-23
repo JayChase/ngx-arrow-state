@@ -1,0 +1,33 @@
+<h1>arrow state</h1>
+<p></p>
+<form class="demo__form" [formGroup]="formGroup" (ngSubmit)="go()">
+  <mat-form-field appearance="outline">
+    <mat-label>Name</mat-label>
+    <input
+      matInput
+      ngxArrowState
+      ngxSubmitOnCtrlEnter
+      formControlName="name"
+      placeholder="Single line text input"
+      value=""
+    />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Description</mat-label>
+    <textarea
+      matInput
+      placeholder="Multiline input on a text area"
+      cdkTextareaAutosize
+      #autosize="cdkTextareaAutosize"
+      cdkAutosizeMinRows="4"
+      cdkAutosizeMaxRows="35"
+      formControlName="description"
+      style="max-height: unset !important"
+      ngxArrowState
+      ngxSubmitOnCtrlEnter
+    ></textarea>
+  </mat-form-field>
+  <button class="demo__submit" mat-icon-button type="submit" color="primary">
+    <mat-icon>send</mat-icon>
+  </button>
+</form>
