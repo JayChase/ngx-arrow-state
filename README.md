@@ -1,5 +1,8 @@
 # ngx-arrow-state
 
+[![CI](https://github.com/JayChase/ngx-arrow-state/actions/workflows/ci.yml/badge.svg)](https://github.com/JayChase/ngx-arrow-state/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/ngx-arrow-state.svg)](https://www.npmjs.com/package/ngx-arrow-state)
+
 An Angular library that provides terminal/shell-like input history navigation using arrow keys, plus Ctrl+Enter form submission for textareas.
 
 Improve UX for chat interfaces, command-line style inputs, and AI prompt interfaces by letting users:

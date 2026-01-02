@@ -44,6 +44,7 @@
     "@angular/compiler-cli": "^21.0.0",
     "@types/express": "^5.0.1",
     "@types/node": "^20.17.19",
+    "@vitest/coverage-v8": "^4.0.16",
     "jsdom": "^27.1.0",
     "ng-packagr": "^21.0.0",
     "typescript": "~5.9.2",

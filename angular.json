@@ -28,7 +28,13 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/ngx-arrow-state/tsconfig.spec.json"
+            "tsConfig": "projects/ngx-arrow-state/tsconfig.spec.json",
+            "coverage": {
+              "enabled": true,
+              "include": ["projects/ngx-arrow-state/src/**/*.ts"],
+              "exclude": ["**/*.spec.ts", "**/*.d.ts"],
+              "reporter": ["text", "lcov", "html"]
+            }
           }
         }
       }
@@ -95,7 +101,15 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverage": {
+              "enabled": true,
+              "include": ["projects/demo/src/**/*.ts"],
+              "exclude": ["**/*.spec.ts", "**/*.d.ts"],
+              "reporter": ["text", "lcov", "html"]
+            }
+          }
         }
       }
     }
