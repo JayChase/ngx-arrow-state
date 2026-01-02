@@ -33,7 +33,7 @@ export class ArrowState<T> implements OnInit {
     if (this.formGroupDirective) {
       if (!this.formControl) {
         throw Error(
-          'upArrowHistory can only be applied to an element with with a formControlName or formControl directive'
+          'upArrowHistory can only be applied to an element with with a formControlName or formControl directive',
         );
       }
 
