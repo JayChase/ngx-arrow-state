@@ -20,7 +20,7 @@ Improve UX for chat interfaces, command-line style inputs, and AI prompt interfa
 ## Install
 
 ```bash
-npm install ngx-arrow-state
+npm i -S ngx-arrow-state
 ```
 
 ## Compatibility
@@ -43,17 +43,12 @@ import { ArrowState } from 'ngx-arrow-state';
 @Component({
   selector: 'app-chat',
   imports: [ReactiveFormsModule, ArrowState],
-  template: \`
+  template: `
     <form [formGroup]="formGroup" (ngSubmit)="send()">
-      <input
-        type="text"
-        formControlName="message"
-        ngxArrowState
-        placeholder="Type a message..."
-      />
+      <input type="text" formControlName="message" ngxArrowState placeholder="Type a message..." />
       <button type="submit">Send</button>
     </form>
-  \`,
+  `,
 })
 export class ChatComponent {
   formGroup = new FormGroup({
@@ -95,7 +90,7 @@ import { ArrowState, SubmitOnCtrlEnter } from 'ngx-arrow-state';
 @Component({
   selector: 'app-chat',
   imports: [ReactiveFormsModule, ArrowState, SubmitOnCtrlEnter],
-  template: \`
+  template: `
     <form [formGroup]="formGroup" (ngSubmit)="send()">
       <textarea
         formControlName="message"
@@ -105,7 +100,7 @@ import { ArrowState, SubmitOnCtrlEnter } from 'ngx-arrow-state';
       ></textarea>
       <button type="submit">Send</button>
     </form>
-  \`,
+  `,
 })
 export class ChatComponent {
   formGroup = new FormGroup({
