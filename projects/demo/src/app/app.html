@@ -2,18 +2,7 @@
 <p></p>
 <form class="demo__form" [formGroup]="formGroup" (ngSubmit)="go()">
   <mat-form-field appearance="outline">
-    <mat-label>Name</mat-label>
-    <input
-      matInput
-      ngxArrowState
-      ngxSubmitOnCtrlEnter
-      formControlName="name"
-      placeholder="Single line text input"
-      value=""
-    />
-  </mat-form-field>
-  <mat-form-field appearance="outline">
-    <mat-label>Description</mat-label>
+    <mat-label>Message</mat-label>
     <textarea
       matInput
       placeholder="Multiline input on a text area"
@@ -21,9 +10,10 @@
       #autosize="cdkTextareaAutosize"
       cdkAutosizeMinRows="4"
       cdkAutosizeMaxRows="35"
-      formControlName="description"
+      formControlName="message"
       style="max-height: unset !important"
       ngxArrowState
+      #controlState="ngxArrowState"
       ngxSubmitOnCtrlEnter
     ></textarea>
   </mat-form-field>
@@ -31,3 +21,13 @@
     <mat-icon>send</mat-icon>
   </button>
 </form>
+<h2>history</h2>
+<mat-list>
+  @for (item of controlState.history; track $index) {
+    <mat-list-item>
+      <mat-icon matListItemIcon
+        ><span class="material-symbols-outlined"> arrow_right </span></mat-icon
+      >{{ item }}</mat-list-item
+    >
+  }
+</mat-list>

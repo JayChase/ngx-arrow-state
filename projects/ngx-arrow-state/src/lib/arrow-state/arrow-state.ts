@@ -3,6 +3,7 @@ import { FormControlDirective, FormControlName, FormGroupDirective } from '@angu
 
 @Directive({
   selector: 'input[type="text"][ngxArrowState], textarea[ngxArrowState]',
+  exportAs: 'ngxArrowState',
   host: {
     '(keydown.arrowup)': 'onArrowUp($event)',
     '(keydown.arrowdown)': 'onArrowDown($event)',
@@ -27,7 +28,7 @@ export class ArrowState<T> implements OnInit {
     transform: (value: boolean | null) => (value ? value : false),
   });
 
-  private history: T[] = [];
+  public readonly history: T[] = [];
 
   ngOnInit() {
     if (this.formGroupDirective) {

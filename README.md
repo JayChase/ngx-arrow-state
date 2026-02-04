@@ -3,7 +3,7 @@
 [![CI](https://github.com/JayChase/ngx-arrow-state/actions/workflows/ci.yml/badge.svg)](https://github.com/JayChase/ngx-arrow-state/actions/workflows/ci.yml)
 [![npm version](https://badge.fury.io/js/ngx-arrow-state.svg)](https://www.npmjs.com/package/ngx-arrow-state)
 
-An Angular library that provides terminal/shell-like input history navigation using arrow keys, and Ctrl+Enter form submission.
+An Angular library that provides AI chat style input history navigation using arrow keys, and Ctrl+Enter form submission.
 
 Improve UX for chat interfaces, command-line style inputs, and AI prompt interfaces by letting users:
 
@@ -141,7 +141,7 @@ The directive automatically:
 
 - Captures values on form submission
 - Provides circular navigation through history
-- Respects cursor position in textareas
+- Respects cursor position in a textarea
 
 ### SubmitOnCtrlEnter
 

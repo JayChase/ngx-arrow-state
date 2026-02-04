@@ -7,6 +7,9 @@ html {
   h1 {
     font: var(--mat-sys-headline-large);
   }
+  h2 {
+    font: var(--mat-sys-headline-medium);
+  }
 
   @include mat.theme(
     (

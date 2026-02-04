@@ -1,7 +1,7 @@
 {
   "name": "ngx-arrow-state",
-  "version": "0.0.3",
-  "description": "An Angular library that provides terminal/shell-like input history navigation using arrow keys, and Ctrl+Enter form submission.",
+  "version": "1.0.1",
+  "description": "An Angular library that provides conversational AI style input history navigation using arrow keys, and Ctrl+Enter form submission.",
   "homepage": "https://github.com/jaychase/ngx-arrow-state",
   "bugs": {
     "url": "https://github.com/jaychase/ngx-arrow-state/issues"
@@ -11,6 +11,7 @@
     "reactive-forms",
     "input-history",
     "arrow-key-navigation",
+    "conversational-input",
     "chat-input",
     "command-history",
     "textarea-submit",

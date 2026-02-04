@@ -1,12 +1,16 @@
 # ngx-arrow-state
 
-An Angular library that provides terminal/shell-like input history navigation using arrow keys, plus Ctrl+Enter form submission for textareas.
+An Angular library that provides AI chat style input history navigation using arrow keys, plus Ctrl+Enter form submission for textareas.
 
 Improve UX for chat interfaces, command-line style inputs, and AI prompt interfaces by letting users:
 
 - ⬆️ **Arrow Up** - Navigate to previous input values
 - ⬇️ **Arrow Down** - Navigate to next input values
 - ⌨️ **Ctrl+Enter** - Submit forms from textareas (since Enter creates newlines)
+
+## TLDR
+
+Go straight to the demo on [StackBlitz](https://stackblitz.com/edit/stackblitz-starters-5lmmwwhl?file=src%2Fapp%2Fapp.html)
 
 ## Features
 
