@@ -8,7 +8,7 @@ Improve UX for chat interfaces, command-line style inputs, and AI prompt interfa
 - ⬇️ **Arrow Down** - Navigate to next input values
 - ⌨️ **Ctrl+Enter** - Submit forms from textareas (since Enter creates newlines)
 
-## TLDR
+## TL;DR
 
 Go straight to the demo on [StackBlitz](https://stackblitz.com/edit/stackblitz-starters-5lmmwwhl?file=src%2Fapp%2Fapp.html)
 
