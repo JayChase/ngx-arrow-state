@@ -1,6 +1,6 @@
 {
   "name": "ngx-arrow-state",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "An Angular library that provides conversational AI style input history navigation using arrow keys, and Ctrl+Enter form submission.",
   "homepage": "https://github.com/jaychase/ngx-arrow-state",
   "bugs": {

@@ -10,7 +10,7 @@ Improve UX for chat interfaces, command-line style inputs, and AI prompt interfa
 
 ## TL;DR
 
-Go straight to the demo on [StackBlitz](https://stackblitz.com/edit/stackblitz-starters-5lmmwwhl?file=src%2Fapp%2Fapp.html)
+Go straight to the demo on [StackBlitz](https://stackblitz.com/edit/ngx-arrow-state-demo?file=src%2Fapp%2Fapp.html)
 
 ## Features
 
