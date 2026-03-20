@@ -253,6 +253,93 @@ export const appConfig: ApplicationConfig = {
 
 No changes are needed to the template — the directive picks up the provider automatically.
 
+### Custom state manager example — @ngrx/signals with localStorage persistence
+
+Install `@ngrx/signals`:
+
+```bash
+npm i -S @ngrx/signals
+```
+
+Create the manager:
+
+```typescript
+import { effect, Injectable } from '@angular/core';
+import { patchState, signalState } from '@ngrx/signals';
+import { ArrowStateManager } from 'ngx-arrow-state';
+
+const STORAGE_KEY = 'ngrx-arrow-state-history';
+
+@Injectable()
+export class NgrxArrowStateManager implements ArrowStateManager<string> {
+  private readonly state = signalState<{ history: string[] }>({
+    history: this.loadFromStorage(),
+  });
+
+  constructor() {
+    // Automatically persists to localStorage whenever the history signal changes
+    effect(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state.history()));
+    });
+  }
+
+  get history(): readonly string[] {
+    return this.state.history();
+  }
+
+  add(value: string): void {
+    if (!value) return;
+    patchState(this.state, { history: [...this.state.history(), value] });
+  }
+
+  previous(): string | undefined {
+    const h = [...this.state.history()];
+    const last = h.pop();
+    if (last !== undefined) h.unshift(last);
+    patchState(this.state, { history: h });
+    return last;
+  }
+
+  next(): string | undefined {
+    const h = [...this.state.history()];
+    const first = h.shift();
+    if (first !== undefined) h.push(first);
+    patchState(this.state, { history: h });
+    return first;
+  }
+
+  private loadFromStorage(): string[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed as string[];
+      }
+    } catch {
+      /* ignore malformed storage */
+    }
+    return [];
+  }
+}
+```
+
+Provide it in `app.config.ts` using `useExisting` so the single instance is shared between direct injection and the token — preventing a duplicate `effect()` from running:
+
+```typescript
+import { ApplicationConfig } from '@angular/core';
+import { ARROW_STATE_MANAGER } from 'ngx-arrow-state';
+import { NgrxArrowStateManager } from './ngrx-arrow-state.manager';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    NgrxArrowStateManager,
+    { provide: ARROW_STATE_MANAGER, useExisting: NgrxArrowStateManager },
+  ],
+};
+```
+
+No changes are needed to the template — the directive picks up the provider automatically.
+
 ## API Reference
 
 ### ArrowState
