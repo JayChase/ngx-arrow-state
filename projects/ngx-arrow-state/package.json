@@ -1,7 +1,7 @@
 {
   "name": "ngx-arrow-state",
-  "version": "1.0.1",
-  "description": "An Angular library that provides conversational AI style input history navigation using arrow keys, and Ctrl+Enter form submission.",
+  "version": "2.0.0",
+  "description": "An Angular library that provides conversational AI style input history navigation using arrow keys and Ctrl+Enter form submission. Pluggable state management via IoC — use the built-in in-memory store or bring your own (e.g. @ngrx/signals, @ngneat/elf).",
   "homepage": "https://github.com/jaychase/ngx-arrow-state",
   "bugs": {
     "url": "https://github.com/jaychase/ngx-arrow-state/issues"
@@ -15,7 +15,15 @@
     "chat-input",
     "command-history",
     "textarea-submit",
-    "ctrl-enter"
+    "ctrl-enter",
+    "state-management",
+    "ioc",
+    "dependency-injection",
+    "ngrx",
+    "ngrx-signals",
+    "elf",
+    "pluggable-state",
+    "custom-state-manager"
   ],
   "author": "JayChase",
   "license": "MIT",

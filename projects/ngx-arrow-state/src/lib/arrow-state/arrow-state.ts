@@ -1,5 +1,10 @@
 import { Directive, ElementRef, inject, input, OnInit } from '@angular/core';
 import { FormControlDirective, FormControlName, FormGroupDirective } from '@angular/forms';
+import {
+  ARROW_STATE_MANAGER,
+  ArrowStateManager,
+  DefaultArrowStateManager,
+} from './arrow-state-manager';
 
 @Directive({
   selector: 'input[type="text"][ngxArrowState], textarea[ngxArrowState]',
@@ -16,6 +21,15 @@ export class ArrowState<T> implements OnInit {
   private formControlDirective = inject(FormControlDirective, { optional: true });
   private formControl = this.formControlDirective || this.formControlName;
 
+  /**
+   * The state manager used for history navigation.  Falls back to an in-memory
+   * DefaultArrowStateManager when no ARROW_STATE_MANAGER provider is configured,
+   * keeping one isolated instance per directive instance.
+   */
+  readonly stateManager: ArrowStateManager<T> =
+    (inject(ARROW_STATE_MANAGER, { optional: true }) as ArrowStateManager<T> | null) ??
+    new DefaultArrowStateManager<T>();
+
   moveToStartOnUpArrow = input<boolean, boolean | null>(true, {
     transform: (value: boolean | null) => (value ? value : false),
   });
@@ -27,8 +41,6 @@ export class ArrowState<T> implements OnInit {
   saveUnSubmittedValues = input<boolean, boolean | null>(true, {
     transform: (value: boolean | null) => (value ? value : false),
   });
-
-  public readonly history: T[] = [];
 
   ngOnInit() {
     if (this.formGroupDirective) {
@@ -42,48 +54,40 @@ export class ArrowState<T> implements OnInit {
 
       this.formGroupDirective.onSubmit = (event) => {
         if (this.formControl) {
-          this.history.push(this.formControl.value);
+          this.stateManager.add(this.formControl.value);
         }
         return onSubmit.bind(this.formGroupDirective)(event);
       };
 
-      //add the initial value to the history as the starting point
-      this.history.push(this.formControl.value);
+      // add the initial value to the history as the starting point
+      this.stateManager.add(this.formControl.value);
     }
   }
 
   onArrowUp(event: Event): void {
-    //don't just pop as need to cycle through history with up and down arrows
-    // also handle text area (up and down through them)
     if (this.formControl) {
       if (this.shouldChangeState('UP')) {
-        const last = this.history.pop();
-
-        if (last !== undefined) {
-          this.formControl.control.setValue(last);
-          this.history.unshift(last);
+        const value = this.stateManager.previous();
+        if (value !== undefined) {
+          this.formControl.control.setValue(value);
         }
       }
     }
   }
 
   onArrowDown(event: Event): void {
-    //don't just pop as need to cycle through history with up and down arrows
-    // also handle text area (up and down through them)
     if (this.formControl) {
       if (this.shouldChangeState('DOWN')) {
-        const first = this.history.shift();
-
-        if (first !== undefined) {
-          this.formControl.control.setValue(first);
-          this.history.push(first);
+        const value = this.stateManager.next();
+        if (value !== undefined) {
+          this.formControl.control.setValue(value);
         }
       }
     }
   }
 
   private shouldChangeState(direction: 'UP' | 'DOWN'): boolean {
-    if (this.history.length < 2) {
+    if ((this.stateManager.history?.length ?? 0) < 2) {
       return false;
     }
 
