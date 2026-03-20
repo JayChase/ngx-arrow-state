@@ -39,6 +39,12 @@
     },
     {
       "path": "./projects/demo/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/demo-elf/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/demo-elf/tsconfig.spec.json"
     }
   ]
 }

@@ -31,7 +31,7 @@ npm i -S ngx-arrow-state
 
 | Angular Version | Package Version |
 | --------------- | --------------- |
-| 21.x            | 0.0.x           |
+| 21.x            | ^1.0.0          |
 
 ## Usage
 

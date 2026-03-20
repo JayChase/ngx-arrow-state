@@ -23,7 +23,7 @@
 </form>
 <h2>history</h2>
 <mat-list>
-  @for (item of controlState.history; track $index) {
+  @for (item of controlState?.history; track $index) {
     <mat-list-item>
       <mat-icon matListItemIcon
         ><span class="material-symbols-outlined"> arrow_right </span></mat-icon

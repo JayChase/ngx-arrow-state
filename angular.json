@@ -29,12 +29,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "tsConfig": "projects/ngx-arrow-state/tsconfig.spec.json",
-            "coverage": {
-              "enabled": true,
-              "include": ["projects/ngx-arrow-state/src/**/*.ts"],
-              "exclude": ["**/*.spec.ts", "**/*.d.ts"],
-              "reporter": ["text", "lcov", "html"]
-            }
+            "coverage": true
           }
         }
       }
@@ -103,13 +98,81 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "coverage": {
-              "enabled": true,
-              "include": ["projects/demo/src/**/*.ts"],
-              "exclude": ["**/*.spec.ts", "**/*.d.ts"],
-              "reporter": ["text", "lcov", "html"]
-            }
+            "coverage": true
           }
+        }
+      }
+    },
+    "demo-elf": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "projects/demo-elf",
+      "sourceRoot": "projects/demo-elf/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "projects/demo-elf/src/main.ts",
+            "tsConfig": "projects/demo-elf/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/demo-elf/public"
+              }
+            ],
+            "styles": [
+              "projects/demo-elf/src/styles.scss"
+            ],
+            "server": "projects/demo-elf/src/main.server.ts",
+            "outputMode": "server",
+            "ssr": {
+              "entry": "projects/demo-elf/src/server.ts"
+            }
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "demo-elf:build:production"
+            },
+            "development": {
+              "buildTarget": "demo-elf:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
         }
       }
     }
