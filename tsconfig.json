@@ -45,6 +45,18 @@
     },
     {
       "path": "./projects/demo-elf/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/elf-demo/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/elf-demo/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/ngrx-signal-store-demo/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/ngrx-signal-store-demo/tsconfig.spec.json"
     }
   ]
 }

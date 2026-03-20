@@ -1,0 +1,12 @@
+.demo {
+  &__form {
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+  }
+  &__submit {
+    align-self: flex-end;
+    background: var(--mat-sys-secondary-container);
+  }
+}

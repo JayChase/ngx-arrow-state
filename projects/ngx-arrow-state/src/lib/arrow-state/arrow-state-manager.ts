@@ -3,8 +3,8 @@ import { InjectionToken } from '@angular/core';
 /**
  * Interface for pluggable state managers used by the ArrowState directive.
  *
- * Implement this interface to integrate a custom state solution (e.g. @ngneat/elf,
- * TanStack Store) and provide it via the ARROW_STATE_MANAGER injection token:
+ * Implement this interface to integrate a custom state solution (e.g. @ngneat/elf)
+ * and provide it via the ARROW_STATE_MANAGER injection token:
  *
  * ```ts
  * providers: [{ provide: ARROW_STATE_MANAGER, useClass: MyElfStateManager }]
