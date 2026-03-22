@@ -1,7 +1,8 @@
-import { Directive, ElementRef, inject, input, OnInit } from '@angular/core';
+import { Directive, ElementRef, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { FormControlDirective, FormControlName, FormGroupDirective } from '@angular/forms';
 import {
   ARROW_STATE_MANAGER,
+  ARROW_STATE_MANAGER_FACTORY,
   ArrowStateManager,
   DefaultArrowStateManager,
 } from './arrow-state-manager';
@@ -14,7 +15,7 @@ import {
     '(keydown.arrowdown)': 'onArrowDown($event)',
   },
 })
-export class ArrowState<T> implements OnInit {
+export class ArrowState<T> implements OnInit, OnDestroy {
   private elementRef = inject<ElementRef<HTMLInputElement | HTMLTextAreaElement>>(ElementRef);
   private formGroupDirective = inject(FormGroupDirective, { optional: false });
   private formControlName = inject(FormControlName, { optional: true });
@@ -22,12 +23,21 @@ export class ArrowState<T> implements OnInit {
   private formControl = this.formControlDirective || this.formControlName;
 
   /**
-   * The state manager used for history navigation.  Falls back to an in-memory
-   * DefaultArrowStateManager when no ARROW_STATE_MANAGER provider is configured,
-   * keeping one isolated instance per directive instance.
+   * The resolved state manager for this directive instance.
+   *
+   * Resolution order (both evaluated during field initialisation, inside the
+   * Angular injection context):
+   * 1. Legacy `ARROW_STATE_MANAGER` token — if a pre-built instance is provided
+   *    at component/root level, it is used as-is (backwards compat).
+   * 2. `ARROW_STATE_MANAGER_FACTORY` — the factory is called to produce a
+   *    **fresh instance per directive**.  `init?(storageKey)` is then called in
+   *    `ngOnInit` so the manager can lazily create its named backing store.
    */
-  readonly stateManager: ArrowStateManager<T> =
+  stateManager: ArrowStateManager<T> =
     (inject(ARROW_STATE_MANAGER, { optional: true }) as ArrowStateManager<T> | null) ??
+    (
+      inject(ARROW_STATE_MANAGER_FACTORY, { optional: true }) as (() => ArrowStateManager<T>) | null
+    )?.() ??
     new DefaultArrowStateManager<T>();
 
   moveToStartOnUpArrow = input<boolean, boolean | null>(true, {
@@ -48,6 +58,14 @@ export class ArrowState<T> implements OnInit {
         throw Error(
           'upArrowHistory can only be applied to an element with with a formControlName or formControl directive',
         );
+      }
+
+      // Initialise the manager with a storage key derived from the control name
+      // so it can lazily create its named backing store.
+      const storageKey =
+        this.formControlName?.name != null ? String(this.formControlName.name) : null;
+      if (storageKey) {
+        this.stateManager.init?.(storageKey);
       }
 
       const onSubmit = this.formGroupDirective.onSubmit;
@@ -84,6 +102,10 @@ export class ArrowState<T> implements OnInit {
         }
       }
     }
+  }
+
+  ngOnDestroy(): void {
+    this.stateManager.destroy?.();
   }
 
   private shouldChangeState(direction: 'UP' | 'DOWN'): boolean {

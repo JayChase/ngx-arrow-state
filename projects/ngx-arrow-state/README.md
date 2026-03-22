@@ -134,15 +134,31 @@ For the best chat/prompt experience, use both directives together:
 
 ## State Management
 
-By default the directive keeps an **in-memory array per directive instance** (`DefaultArrowStateManager`). History is lost on page reload.
+By default the directive creates a **`DefaultArrowStateManager` per directive instance** — a simple in-memory array. History is lost on page reload.
 
-For more advanced scenarios you can provide your own state manager via the `ARROW_STATE_MANAGER` injection token.
+For persistence or integration with an existing state library, provide your own manager via the `ARROW_STATE_MANAGER_FACTORY` token **at component level**.
+
+### How it works
+
+The directive resolves its state manager using this fallback chain:
+
+1. **`ARROW_STATE_MANAGER`** — legacy token; if a pre-built instance is provided it is used as-is (backwards compat).
+2. **`ARROW_STATE_MANAGER_FACTORY`** — the factory is called once per directive instance to produce a **fresh, isolated manager**. `init?(storageKey)` is then called in `ngOnInit` so the manager can lazily create its named backing store.
+3. **`new DefaultArrowStateManager()`** — used automatically when neither token is provided.
 
 ### ArrowStateManager interface
 
 ```typescript
 export interface ArrowStateManager<T = unknown> {
-  /** Called on init (initial value) and on every form submit. */
+  /**
+   * Optionally called by the directive in ngOnInit with a storage key derived
+   * from the form-control name. Use this to lazily create the backing store
+   * so every directive instance gets fully isolated, named storage.
+   * Not required for in-memory managers that are already isolated per instance.
+   */
+  init?(storageKey: string): void;
+
+  /** Add a value (called on init and on every form submit). */
   add(value: T): void;
 
   /** Rotate backwards and return the previous entry (Arrow Up). */
@@ -153,6 +169,9 @@ export interface ArrowStateManager<T = unknown> {
 
   /** Optional — expose history entries for display in the template. */
   readonly history?: readonly T[];
+
+  /** Optional cleanup — called when the directive is destroyed. */
+  destroy?(): void;
 }
 ```
 
@@ -168,9 +187,9 @@ Used automatically when no provider is configured. Each directive instance gets 
 You can read `stateManager.history` directly from the template via the exported directive reference:
 
 ```html
-<textarea formControlName="message" ngxArrowState #controlState="ngxArrowState"></textarea>
+<input type="text" formControlName="message" ngxArrowState #messageState="ngxArrowState" />
 
-@for (item of controlState.stateManager.history; track $index) {
+@for (item of messageState.stateManager.history; track $index) {
 <div>{{ item }}</div>
 }
 ```
@@ -183,10 +202,9 @@ Install the elf packages:
 npm i -S @ngneat/elf @ngneat/elf-persist-state
 ```
 
-Create the manager:
+Create the manager as a plain class (no `@Injectable` needed):
 
 ```typescript
-import { Injectable, OnDestroy } from '@angular/core';
 import { createStore, setProp, withProps } from '@ngneat/elf';
 import { localStorageStrategy, persistState } from '@ngneat/elf-persist-state';
 import { ArrowStateManager } from 'ngx-arrow-state';
@@ -195,20 +213,28 @@ interface ArrowStateProps {
   history: string[];
 }
 
-@Injectable({ providedIn: 'root' })
-export class ElfArrowStateManager implements ArrowStateManager<string>, OnDestroy {
-  private readonly store = createStore(
-    { name: 'arrow-state-history' },
-    withProps<ArrowStateProps>({ history: [] }),
-  );
+export class ElfArrowStateManager implements ArrowStateManager<string> {
+  private store!: ReturnType<typeof createStore>;
+  private persistence!: ReturnType<typeof persistState>;
 
-  private readonly persistence = persistState(this.store, {
-    key: 'arrow-state-history',
-    storage: localStorageStrategy,
-  });
+  /**
+   * Called by the directive in ngOnInit.
+   * Lazily creates a named Elf store + localStorage persistence
+   * under `arrow-state:<controlName>` so every control is isolated.
+   */
+  init(storageKey: string): void {
+    this.store = createStore(
+      { name: `arrow-state:${storageKey}` },
+      withProps<ArrowStateProps>({ history: [] }),
+    );
+    this.persistence = persistState(this.store, {
+      key: `arrow-state:${storageKey}`,
+      storage: localStorageStrategy,
+    });
+  }
 
   get history(): readonly string[] {
-    return this.store.getValue().history;
+    return this.store?.getValue().history ?? [];
   }
 
   add(value: string): void {
@@ -232,26 +258,32 @@ export class ElfArrowStateManager implements ArrowStateManager<string>, OnDestro
     return first;
   }
 
-  ngOnDestroy(): void {
-    this.persistence.unsubscribe();
-    this.store.destroy();
+  destroy(): void {
+    this.persistence?.unsubscribe();
+    this.store?.destroy();
   }
 }
 ```
 
-Provide it in `app.config.ts`:
+Provide it via `ARROW_STATE_MANAGER_FACTORY` at **component level** — not in `app.config.ts`. The factory is called once per directive instance, so every control gets its own isolated store:
 
 ```typescript
-import { ApplicationConfig } from '@angular/core';
-import { ARROW_STATE_MANAGER } from 'ngx-arrow-state';
+import { Component } from '@angular/core';
+import { ARROW_STATE_MANAGER_FACTORY } from 'ngx-arrow-state';
 import { ElfArrowStateManager } from './elf-arrow-state.manager';
 
-export const appConfig: ApplicationConfig = {
-  providers: [{ provide: ARROW_STATE_MANAGER, useClass: ElfArrowStateManager }],
-};
+@Component({
+  providers: [
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new ElfArrowStateManager(),
+    },
+  ],
+})
+export class AppComponent {}
 ```
 
-No changes are needed to the template — the directive picks up the provider automatically.
+No changes are needed in the template — the `ngxArrowState` directive resolves the token automatically.
 
 ### Custom state manager example — @ngrx/signals with localStorage persistence
 
@@ -268,19 +300,31 @@ import { effect, Injectable } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 import { ArrowStateManager } from 'ngx-arrow-state';
 
-const STORAGE_KEY = 'ngrx-arrow-state-history';
-
 @Injectable()
 export class NgrxArrowStateManager implements ArrowStateManager<string> {
-  private readonly state = signalState<{ history: string[] }>({
-    history: this.loadFromStorage(),
-  });
+  private storageKey!: string;
+
+  private readonly state = signalState<{ history: string[] }>({ history: [] });
 
   constructor() {
-    // Automatically persists to localStorage whenever the history signal changes
+    // Effect runs in the directive's injection context — auto-cleaned on destroy.
+    // Guards on storageKey being set by init().
     effect(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state.history()));
+      if (!this.storageKey) return;
+      localStorage.setItem(this.storageKey, JSON.stringify(this.state.history()));
     });
+  }
+
+  /**
+   * Called by the directive in ngOnInit.
+   * Sets a per-control storage key and hydrates history from localStorage.
+   */
+  init(storageKey: string): void {
+    this.storageKey = `ngrx-arrow-state:${controlName}`;
+    const saved = this.loadFromStorage();
+    if (saved.length) {
+      patchState(this.state, { history: saved });
+    }
   }
 
   get history(): readonly string[] {
@@ -310,7 +354,7 @@ export class NgrxArrowStateManager implements ArrowStateManager<string> {
 
   private loadFromStorage(): string[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(this.storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return parsed as string[];
@@ -323,22 +367,25 @@ export class NgrxArrowStateManager implements ArrowStateManager<string> {
 }
 ```
 
-Provide it in `app.config.ts` using `useExisting` so the single instance is shared between direct injection and the token — preventing a duplicate `effect()` from running:
+Provide it via `ARROW_STATE_MANAGER_FACTORY` at **component level**:
 
 ```typescript
-import { ApplicationConfig } from '@angular/core';
-import { ARROW_STATE_MANAGER } from 'ngx-arrow-state';
+import { Component } from '@angular/core';
+import { ARROW_STATE_MANAGER_FACTORY } from 'ngx-arrow-state';
 import { NgrxArrowStateManager } from './ngrx-arrow-state.manager';
 
-export const appConfig: ApplicationConfig = {
+@Component({
   providers: [
-    NgrxArrowStateManager,
-    { provide: ARROW_STATE_MANAGER, useExisting: NgrxArrowStateManager },
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new NgrxArrowStateManager(),
+    },
   ],
-};
+})
+export class AppComponent {}
 ```
 
-No changes are needed to the template — the directive picks up the provider automatically.
+No changes are needed in the template — the directive picks up the provider automatically.
 
 ## API Reference
 
@@ -361,18 +408,32 @@ Triggers form submission when Ctrl+Enter is pressed. Works on any element within
 
 ### DefaultArrowStateManager
 
-In-memory implementation used automatically when no `ARROW_STATE_MANAGER` provider is configured.
+In-memory implementation used automatically when neither `ARROW_STATE_MANAGER` nor `ARROW_STATE_MANAGER_FACTORY` is provided. One instance is created per directive instance.
 
-| Member       | Description                              |
-| ------------ | ---------------------------------------- |
-| `history`    | `readonly T[]` — the current entry array |
-| `add()`      | Appends a value                          |
-| `previous()` | Rotates backwards, returns last entry    |
-| `next()`     | Rotates forwards, returns first entry    |
+| Member       | Description                               |
+| ------------ | ----------------------------------------- |
+| `history`    | `readonly T[]` — the current entry array  |
+| `add()`      | Appends a value                           |
+| `previous()` | Rotates backwards, returns last entry     |
+| `next()`     | Rotates forwards, returns first entry     |
+| `init()`     | No-op — isolation is already per-instance |
+
+### ARROW_STATE_MANAGER_FACTORY
+
+`InjectionToken<() => ArrowStateManager>` — provide a **factory function** at component level. The directive calls the factory once per instance so every control gets its own isolated manager, then calls `manager.init?(storageKey)` in `ngOnInit`.
+
+```typescript
+@Component({
+  providers: [{
+    provide: ARROW_STATE_MANAGER_FACTORY,
+    useValue: () => new MyArrowStateManager(),
+  }],
+})
+```
 
 ### ARROW_STATE_MANAGER
 
-An `InjectionToken<ArrowStateManager>` with no root factory. Provide your own implementation at the application, component, or directive injector level.
+`InjectionToken<ArrowStateManager>` — legacy token kept for backwards compatibility. If provided, the directive uses the instance directly and skips the factory. Prefer `ARROW_STATE_MANAGER_FACTORY` for new code.
 
 ## Requirements
 

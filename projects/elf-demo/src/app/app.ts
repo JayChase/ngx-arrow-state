@@ -7,7 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ArrowState, SubmitOnCtrlEnter } from 'ngx-arrow-state';
+import { ARROW_STATE_MANAGER_FACTORY, ArrowState, SubmitOnCtrlEnter } from 'ngx-arrow-state';
+import { ElfArrowStateManager } from './elf-arrow-state.manager';
 
 @Component({
   selector: 'app-root',
@@ -23,6 +24,17 @@ import { ArrowState, SubmitOnCtrlEnter } from 'ngx-arrow-state';
     MatListModule,
     SubmitOnCtrlEnter,
   ],
+  // Factory provided at component level.
+  // ArrowState calls factory() in its field initialiser (injection context) to
+  // get a fresh ElfArrowStateManager per directive, then calls init(controlName)
+  // in ngOnInit so each manager lazily creates its named Elf store + storage key.
+  // destroy() is called by the directive's ngOnDestroy to clean up the store.
+  providers: [
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new ElfArrowStateManager(),
+    },
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -30,13 +42,12 @@ export class App {
   private matSnackBar = inject(MatSnackBar);
 
   formGroup = new FormGroup({
-    message: new FormControl<string | null>(null, {
-      validators: [],
-    }),
+    subject: new FormControl<string | null>(null),
+    message: new FormControl<string | null>(null),
   });
 
   go() {
-    this.formGroup.setValue({ message: null });
+    this.formGroup.setValue({ subject: null, message: null });
     this.formGroup.markAsPristine();
     this.formGroup.markAsUntouched();
     this.matSnackBar.open('form submitted and reset ', undefined, { duration: 3000 });

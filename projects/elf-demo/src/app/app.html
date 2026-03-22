@@ -1,11 +1,23 @@
-<h1>arrow state</h1>
-<p></p>
+<h1>arrow state — Elf</h1>
 <form class="demo__form" [formGroup]="formGroup" (ngSubmit)="go()">
+  <mat-form-field appearance="outline">
+    <mat-label>Subject</mat-label>
+    <input
+      matInput
+      type="text"
+      placeholder="Short subject line"
+      formControlName="subject"
+      ngxArrowState
+      #subjectState="ngxArrowState"
+      ngxSubmitOnCtrlEnter
+    />
+  </mat-form-field>
+
   <mat-form-field appearance="outline">
     <mat-label>Message</mat-label>
     <textarea
       matInput
-      placeholder="Multiline input on a text area"
+      placeholder="Multiline message body"
       cdkTextareaAutosize
       #autosize="cdkTextareaAutosize"
       cdkAutosizeMinRows="4"
@@ -13,17 +25,30 @@
       formControlName="message"
       style="max-height: unset !important"
       ngxArrowState
-      #controlState="ngxArrowState"
+      #messageState="ngxArrowState"
       ngxSubmitOnCtrlEnter
     ></textarea>
   </mat-form-field>
+
   <button class="demo__submit" mat-icon-button type="submit" color="primary">
     <mat-icon>send</mat-icon>
   </button>
 </form>
-<h2>history</h2>
+
+<h2>subject history</h2>
 <mat-list>
-  @for (item of controlState.stateManager.history; track $index) {
+  @for (item of subjectState.stateManager.history; track $index) {
+    <mat-list-item>
+      <mat-icon matListItemIcon
+        ><span class="material-symbols-outlined"> arrow_right </span></mat-icon
+      >{{ item }}</mat-list-item
+    >
+  }
+</mat-list>
+
+<h2>message history</h2>
+<mat-list>
+  @for (item of messageState.stateManager.history; track $index) {
     <mat-list-item>
       <mat-icon matListItemIcon
         ><span class="material-symbols-outlined"> arrow_right </span></mat-icon

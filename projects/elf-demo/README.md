@@ -1,12 +1,13 @@
 # elf-demo
 
-A demo application for [ngx-arrow-state](../../README.md) showing how to replace the default in-memory state manager with a custom `@ngneat/elf` implementation that **persists history to `localStorage`**.
+A demo application for [ngx-arrow-state](../../README.md) showing how to replace the default in-memory state manager with a custom `@ngneat/elf` implementation that **persists history to `localStorage`**, with **fully isolated per-control stores**.
 
 ## What this demo shows
 
-- `ngxArrowState` and `ngxSubmitOnCtrlEnter` directives on a `<textarea>`
-- History that survives page reloads via `@ngneat/elf` + `@ngneat/elf-persist-state`
-- How to implement and provide a custom `ArrowStateManager`
+- `ngxArrowState` and `ngxSubmitOnCtrlEnter` directives on multiple controls
+- Each control has its own independently persisted history (survives page reloads)
+- How to implement and provide a custom `ArrowStateManager` using the factory pattern
+- Multiple controls in the same form without any state clashing
 
 ## Run the demo
 
@@ -20,10 +21,9 @@ ng serve elf-demo
 
 ### ElfArrowStateManager
 
-[src/app/elf-arrow-state.manager.ts](src/app/elf-arrow-state.manager.ts) implements the `ArrowStateManager<string>` interface using an elf store:
+[src/app/elf-arrow-state.manager.ts](src/app/elf-arrow-state.manager.ts) implements `ArrowStateManager<string>`. It is a plain class (no `@Injectable`) — it is instantiated by the factory, not Angular's DI:
 
 ```typescript
-import { Injectable, OnDestroy } from '@angular/core';
 import { createStore, setProp, withProps } from '@ngneat/elf';
 import { localStorageStrategy, persistState } from '@ngneat/elf-persist-state';
 import { ArrowStateManager } from 'ngx-arrow-state';
@@ -32,20 +32,23 @@ interface ArrowStateProps {
   history: string[];
 }
 
-@Injectable({ providedIn: 'root' })
-export class ElfArrowStateManager implements ArrowStateManager<string>, OnDestroy {
-  private readonly store = createStore(
-    { name: 'arrow-state-history' },
-    withProps<ArrowStateProps>({ history: [] }),
-  );
+export class ElfArrowStateManager implements ArrowStateManager<string> {
+  private store!: ReturnType<typeof createStore>;
+  private persistence!: ReturnType<typeof persistState>;
 
-  private readonly persistence = persistState(this.store, {
-    key: 'arrow-state-history',
-    storage: localStorageStrategy,
-  });
+  init(controlName: string): void {
+    this.store = createStore(
+      { name: `arrow-state:${controlName}` },
+      withProps<ArrowStateProps>({ history: [] }),
+    );
+    this.persistence = persistState(this.store, {
+      key: `arrow-state:${controlName}`,
+      storage: localStorageStrategy,
+    });
+  }
 
   get history(): readonly string[] {
-    return this.store.getValue().history;
+    return this.store?.getValue().history ?? [];
   }
 
   add(value: string): void {
@@ -69,58 +72,63 @@ export class ElfArrowStateManager implements ArrowStateManager<string>, OnDestro
     return first;
   }
 
-  ngOnDestroy(): void {
-    this.persistence.unsubscribe();
-    this.store.destroy();
+  destroy(): void {
+    this.persistence?.unsubscribe();
+    this.store?.destroy();
   }
 }
 ```
 
 Key points:
 
-- **`add()`** guards against empty/null values (the form's initial `null` state before the user types anything)
-- **`previous()` / `next()`** operate on a shallow copy of the array to keep elf's immutability guarantee, then write back via `setProp`
-- **`persistState`** subscribes to store changes and syncs to `localStorage` automatically under the key `arrow-state-history`
-- **`ngOnDestroy`** unsubscribes from persistence and destroys the store to avoid memory leaks
+- **No `@Injectable`** — it is a plain class instantiated by the factory function, not Angular's injector
+- **`init(controlName)`** is called by the directive in `ngOnInit`. It lazily creates a named Elf store and wires up `persistState` under `arrow-state:<controlName>` — so `subject` and `message` controls each get their own independent store and `localStorage` key
+- **`previous()` / `next()`** operate on a shallow copy to preserve Elf's immutability guarantee
+- **`destroy()`** is called by the directive's `ngOnDestroy` to unsubscribe persistence and destroy the store
 
 ### Providing the manager
 
-[src/app/app.config.ts](src/app/app.config.ts) registers the manager via the `ARROW_STATE_MANAGER` injection token:
+`ARROW_STATE_MANAGER_FACTORY` is provided at **component level** in [src/app/app.ts](src/app/app.ts) — not in `app.config.ts`. The directive calls the factory once per instance, so every `ngxArrowState` control gets its own fresh `ElfArrowStateManager`:
 
 ```typescript
-import { ApplicationConfig } from '@angular/core';
-import { ARROW_STATE_MANAGER } from 'ngx-arrow-state';
+import { Component } from '@angular/core';
+import { ARROW_STATE_MANAGER_FACTORY } from 'ngx-arrow-state';
 import { ElfArrowStateManager } from './elf-arrow-state.manager';
 
-export const appConfig: ApplicationConfig = {
-  providers: [{ provide: ARROW_STATE_MANAGER, useClass: ElfArrowStateManager }],
-};
+@Component({
+  providers: [
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new ElfArrowStateManager(),
+    },
+  ],
+})
+export class AppComponent {}
 ```
 
 No changes are needed in the template — the `ngxArrowState` directive resolves the token automatically via Angular's DI.
 
 ### Displaying history
 
-The template exports the directive reference to render the live history list:
+The template exports each directive reference to render a live history list per control:
 
 ```html
-<textarea
-  formControlName="message"
-  ngxArrowState
-  #controlState="ngxArrowState"
-  ngxSubmitOnCtrlEnter
-></textarea>
+<input type="text" formControlName="subject" ngxArrowState #subjectState="ngxArrowState" />
+<input type="text" formControlName="message" ngxArrowState #messageState="ngxArrowState" />
 
-@for (item of controlState.stateManager.history; track $index) {
+@for (item of subjectState.stateManager.history; track $index) {
+<mat-list-item>{{ item }}</mat-list-item>
+} @for (item of messageState.stateManager.history; track $index) {
 <mat-list-item>{{ item }}</mat-list-item>
 }
 ```
 
-## Comparison with the default demo
+## Comparison with other demos
 
-| Feature              | `demo`                     | `elf-demo`                                 |
-| -------------------- | -------------------------- | ------------------------------------------ |
-| State manager        | `DefaultArrowStateManager` | `ElfArrowStateManager`                     |
-| Storage              | In-memory (per instance)   | `localStorage` via elf                     |
-| Survives page reload | ❌                         | ✅                                         |
-| Extra dependencies   | None                       | `@ngneat/elf`, `@ngneat/elf-persist-state` |
+| Feature              | `demo`                     | `elf-demo`                                 | `ngrx-signal-store-demo`      |
+| -------------------- | -------------------------- | ------------------------------------------ | ----------------------------- |
+| State manager        | `DefaultArrowStateManager` | `ElfArrowStateManager`                     | `NgrxArrowStateManager`       |
+| Storage              | In-memory (per instance)   | `localStorage` via elf                     | `localStorage` via `effect()` |
+| Survives page reload | ❌                         | ✅                                         | ✅                            |
+| Isolated per control | ✅                         | ✅                                         | ✅                            |
+| Extra dependencies   | None                       | `@ngneat/elf`, `@ngneat/elf-persist-state` | `@ngrx/signals`               |

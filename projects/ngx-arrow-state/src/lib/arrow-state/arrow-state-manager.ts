@@ -2,18 +2,17 @@ import { InjectionToken } from '@angular/core';
 
 /**
  * Interface for pluggable state managers used by the ArrowState directive.
- *
- * Implement this interface to integrate a custom state solution (e.g. @ngneat/elf)
- * and provide it via the ARROW_STATE_MANAGER injection token:
- *
- * ```ts
- * providers: [{ provide: ARROW_STATE_MANAGER, useClass: MyElfStateManager }]
- * ```
- *
- * When no provider is configured the directive falls back to DefaultArrowStateManager
- * which keeps an in-memory array per directive instance.
  */
 export interface ArrowStateManager<T = unknown> {
+  /**
+   * Optionally called by the directive in `ngOnInit` with a storage key derived
+   * from the form-control name.  Use this to lazily create the backing store
+   * (e.g. a named Elf store or a `signalState` keyed by storage key) so every
+   * directive instance gets fully isolated, named storage with zero clashing.
+   * Not required for in-memory managers that are already isolated per instance.
+   */
+  init?(storageKey: string): void;
+
   /** Add a value (called on init with the initial value, and on every form submit). */
   add(value: T): void;
 
@@ -31,6 +30,13 @@ export interface ArrowStateManager<T = unknown> {
 
   /** The current history entries. Optional — implementors may choose not to expose internal state. */
   readonly history?: readonly T[];
+
+  /**
+   * Optional cleanup hook — called when the host `ArrowState` directive is
+   * destroyed.  Implement this to tear down stores that need explicit cleanup
+   * (e.g. Elf `store.destroy()`).
+   */
+  destroy?(): void;
 }
 
 /**
@@ -63,8 +69,33 @@ export class DefaultArrowStateManager<T = unknown> implements ArrowStateManager<
 }
 
 /**
- * Injection token for the ArrowStateManager.
- * No root factory is registered — the directive creates a DefaultArrowStateManager
- * per-instance when no provider is found.
+ * Injection token for a pre-built ArrowStateManager instance.
+ * Kept for backwards compatibility — prefer `ARROW_STATE_MANAGER_FACTORY` for
+ * new code so every `ngxArrowState` directive gets its own isolated store.
  */
 export const ARROW_STATE_MANAGER = new InjectionToken<ArrowStateManager>('ARROW_STATE_MANAGER');
+
+/**
+ * Factory function token provided at **component level** (never root).
+ *
+ * Return a **new** `ArrowStateManager` instance on every call — the directive
+ * calls this factory once per instance during construction, then immediately
+ * calls `manager.init?(storageKey)` in `ngOnInit` so the manager can lazily
+ * create its named backing store (e.g. a named Elf store or a `signalState`
+ * keyed by storage key).
+ *
+ * The root default creates a `DefaultArrowStateManager` (in-memory, no
+ * persistence).  Override at component level with your own implementation:
+ *
+ * ```ts
+ * @Component({
+ *   providers: [{
+ *     provide: ARROW_STATE_MANAGER_FACTORY,
+ *     useValue: () => new MyArrowStateManager(),
+ *   }],
+ * })
+ * ```
+ */
+export const ARROW_STATE_MANAGER_FACTORY = new InjectionToken<() => ArrowStateManager>(
+  'ARROW_STATE_MANAGER_FACTORY',
+);

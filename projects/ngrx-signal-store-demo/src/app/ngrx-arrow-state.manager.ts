@@ -6,40 +6,48 @@ interface ArrowSignalState {
   history: string[];
 }
 
-const STORAGE_KEY = 'ngrx-arrow-state-history';
-
 /**
- * An {@link ArrowStateManager} backed by the NgRx Signals `signalState` primitive.
+ * NgRx Signals-backed {@link ArrowStateManager}.
  *
- * State is persisted to `localStorage` under the key `ngrx-arrow-state-history`
- * via an Angular {@link effect} that runs whenever the `history` signal changes.
+ * Provided at **component level** via `ARROW_STATE_MANAGER_FACTORY` so the
+ * directive creates a **new instance per control**.  `init(storageKey)` lazily
+ * sets the `localStorage` key and hydrates the initial history, keeping each
+ * control's state fully isolated.
  *
- * **Providing the manager:**
  * ```ts
- * // app.config.ts
- * providers: [
- *   NgrxArrowStateManager,
- *   { provide: ARROW_STATE_MANAGER, useExisting: NgrxArrowStateManager },
- * ]
- * ```
- *
- * @example Read history in a template via the directive reference:
- * ```html
- * <textarea ngxArrowState #controlState="ngxArrowState"></textarea>
- * @for (item of controlState.stateManager.history; track $index) { ... }
+ * @Component({
+ *   providers: [{
+ *     provide: ARROW_STATE_MANAGER_FACTORY,
+ *     useValue: () => new NgrxArrowStateManager(),
+ *   }],
+ * })
  * ```
  */
 @Injectable()
 export class NgrxArrowStateManager implements ArrowStateManager<string> {
-  private readonly state = signalState<ArrowSignalState>({
-    history: this.loadFromStorage(),
-  });
+  private storageKey!: string;
+
+  private readonly state = signalState<ArrowSignalState>({ history: [] });
 
   constructor() {
+    // Effect is tied to the directive's injection context — auto-cleaned on
+    // directive destroy.  Guard on storageKey being set by init().
     effect(() => {
-      const h = this.state.history();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(h));
+      if (!this.storageKey) return;
+      localStorage.setItem(this.storageKey, JSON.stringify(this.state.history()));
     });
+  }
+
+  /**
+   * Called by the directive in ngOnInit.  Sets the storage key and
+   * hydrates history from localStorage so state survives page refreshes.
+   */
+  init(storageKey: string): void {
+    this.storageKey = `ngrx-arrow-state:${storageKey}`;
+    const saved = this.loadFromStorage();
+    if (saved.length) {
+      patchState(this.state, { history: saved });
+    }
   }
 
   get history(): readonly string[] {
@@ -69,7 +77,7 @@ export class NgrxArrowStateManager implements ArrowStateManager<string> {
 
   private loadFromStorage(): string[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(this.storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return parsed as string[];

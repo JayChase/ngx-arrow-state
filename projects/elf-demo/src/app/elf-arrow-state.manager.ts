@@ -1,4 +1,3 @@
-import { Injectable, OnDestroy } from '@angular/core';
 import { createStore, setProp, withProps } from '@ngneat/elf';
 import { localStorageStrategy, persistState } from '@ngneat/elf-persist-state';
 import { ArrowStateManager } from 'ngx-arrow-state';
@@ -7,20 +6,47 @@ interface ArrowStateProps {
   history: string[];
 }
 
-@Injectable({ providedIn: 'root' })
-export class ElfArrowStateManager implements ArrowStateManager<string>, OnDestroy {
-  private readonly store = createStore(
-    { name: 'arrow-state-history' },
-    withProps<ArrowStateProps>({ history: [] }),
-  );
+/**
+ * Elf-backed {@link ArrowStateManager}.
+ *
+ * Provided at **component level** via `ARROW_STATE_MANAGER_FACTORY` so the
+ * directive creates a **new instance per control**.  `init(storageKey)` lazily
+ * creates a named Elf store + localStorage persistence so each control has
+ * fully isolated, independently persisted history.
+ *
+ * `destroy()` is called automatically by the directive's `ngOnDestroy` to
+ * unsubscribe persistence and destroy the store.
+ *
+ * ```ts
+ * @Component({
+ *   providers: [{
+ *     provide: ARROW_STATE_MANAGER_FACTORY,
+ *     useValue: () => new ElfArrowStateManager(),
+ *   }],
+ * })
+ * ```
+ */
+export class ElfArrowStateManager implements ArrowStateManager<string> {
+  private store!: ReturnType<typeof createStore>;
+  private persistence!: ReturnType<typeof persistState>;
 
-  private readonly persistence = persistState(this.store, {
-    key: 'arrow-state-history',
-    storage: localStorageStrategy,
-  });
+  /**
+   * Called by the directive in ngOnInit.  Lazily creates a named Elf store
+   * and wires up localStorage persistence under `arrow-state:<storageKey>`.
+   */
+  init(storageKey: string): void {
+    this.store = createStore(
+      { name: `arrow-state:${storageKey}` },
+      withProps<ArrowStateProps>({ history: [] }),
+    );
+    this.persistence = persistState(this.store, {
+      key: `arrow-state:${storageKey}`,
+      storage: localStorageStrategy,
+    });
+  }
 
   get history(): readonly string[] {
-    return this.store.getValue().history;
+    return this.store?.getValue().history ?? [];
   }
 
   add(value: string): void {
@@ -44,8 +70,8 @@ export class ElfArrowStateManager implements ArrowStateManager<string>, OnDestro
     return first;
   }
 
-  ngOnDestroy(): void {
-    this.persistence.unsubscribe();
-    this.store.destroy();
+  destroy(): void {
+    this.persistence?.unsubscribe();
+    this.store?.destroy();
   }
 }

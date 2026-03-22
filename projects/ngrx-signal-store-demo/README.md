@@ -1,12 +1,13 @@
 # ngrx-signal-store-demo
 
-A demo application for [ngx-arrow-state](../../README.md) showing how to replace the default in-memory state manager with a custom `@ngrx/signals` implementation that **persists history to `localStorage`**.
+A demo application for [ngx-arrow-state](../../README.md) showing how to replace the default in-memory state manager with a custom `@ngrx/signals` implementation that **persists history to `localStorage`**, with **fully isolated per-control state**.
 
 ## What this demo shows
 
-- `ngxArrowState` and `ngxSubmitOnCtrlEnter` directives on a `<textarea>`
-- History that survives page reloads via `@ngrx/signals` `signalState` + Angular `effect()`
-- How to implement and provide a custom `ArrowStateManager`
+- `ngxArrowState` and `ngxSubmitOnCtrlEnter` directives on multiple controls
+- Each control has its own independently persisted history (survives page reloads)
+- How to implement and provide a custom `ArrowStateManager` using the factory pattern
+- Multiple controls in the same form without any state clashing
 
 ## Run the demo
 
@@ -20,25 +21,34 @@ ng serve ngrx-signal-store-demo
 
 ### NgrxArrowStateManager
 
-[src/app/ngrx-arrow-state.manager.ts](src/app/ngrx-arrow-state.manager.ts) implements the `ArrowStateManager<string>` interface using `signalState` from `@ngrx/signals`:
+[src/app/ngrx-arrow-state.manager.ts](src/app/ngrx-arrow-state.manager.ts) implements `ArrowStateManager<string>` using `signalState` from `@ngrx/signals`:
 
 ```typescript
 import { effect, Injectable } from '@angular/core';
 import { patchState, signalState } from '@ngrx/signals';
 import { ArrowStateManager } from 'ngx-arrow-state';
 
-const STORAGE_KEY = 'ngrx-arrow-state-history';
-
 @Injectable()
 export class NgrxArrowStateManager implements ArrowStateManager<string> {
-  private readonly state = signalState<{ history: string[] }>({
-    history: this.loadFromStorage(),
-  });
+  private storageKey!: string;
+
+  private readonly state = signalState<{ history: string[] }>({ history: [] });
 
   constructor() {
+    // Effect is tied to the directive's injection context — auto-cleaned on
+    // directive destroy. Guards on storageKey being set by init().
     effect(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state.history()));
+      if (!this.storageKey) return;
+      localStorage.setItem(this.storageKey, JSON.stringify(this.state.history()));
     });
+  }
+
+  init(storageKey: string): void {
+    this.storageKey = `ngrx-arrow-state:${storageKey}`;
+    const saved = this.loadFromStorage();
+    if (saved.length) {
+      patchState(this.state, { history: saved });
+    }
   }
 
   get history(): readonly string[] {
@@ -68,7 +78,7 @@ export class NgrxArrowStateManager implements ArrowStateManager<string> {
 
   private loadFromStorage(): string[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(this.storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return parsed as string[];
@@ -83,47 +93,45 @@ export class NgrxArrowStateManager implements ArrowStateManager<string> {
 
 Key points:
 
-- **`signalState`** creates a fine-grained reactive state object — `this.state.history()` is a `Signal<string[]>`
-- **`patchState`** applies immutable updates, triggering any downstream signals or effects
-- **`effect()`** runs in the constructor's injection context and re-executes automatically whenever `this.state.history()` changes, persisting the new value to `localStorage`
-- **`loadFromStorage()`** initialises the state from `localStorage` so history survives page reloads
-- **`@Injectable()`** (without `providedIn`) keeps instantiation explicitly under app control
+- **`@Injectable()`** (without `providedIn`) — Angular manages the instance lifetime when the factory runs inside the directive's injection context
+- **`init(storageKey)`** is called by the directive in `ngOnInit`. It sets a per-control `localStorage` key (`ngrx-arrow-state:<storageKey>`) and hydrates state from storage — so `subject` and `message` controls each have independent, isolated history
+- **`signalState`** creates fine-grained reactive state — `this.state.history()` is a `Signal<string[]>`
+- **`effect()`** runs in the directive's injection context and re-executes whenever `history` changes, persisting to `localStorage`. The `storageKey` guard prevents a write before `init()` is called
+- **`patchState`** applies immutable updates
 
 ### Providing the manager
 
-[src/app/app.config.ts](src/app/app.config.ts) registers the manager via the `ARROW_STATE_MANAGER` injection token using `useExisting` to avoid double-instantiation:
+`ARROW_STATE_MANAGER_FACTORY` is provided at **component level** in [src/app/app.ts](src/app/app.ts) — not in `app.config.ts`. The directive calls the factory once per instance, so every `ngxArrowState` control gets its own fresh `NgrxArrowStateManager`:
 
 ```typescript
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { ARROW_STATE_MANAGER } from 'ngx-arrow-state';
+import { Component } from '@angular/core';
+import { ARROW_STATE_MANAGER_FACTORY } from 'ngx-arrow-state';
 import { NgrxArrowStateManager } from './ngrx-arrow-state.manager';
 
-export const appConfig: ApplicationConfig = {
+@Component({
   providers: [
-    provideBrowserGlobalErrorListeners(),
-    NgrxArrowStateManager,
-    { provide: ARROW_STATE_MANAGER, useExisting: NgrxArrowStateManager },
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new NgrxArrowStateManager(),
+    },
   ],
-};
+})
+export class AppComponent {}
 ```
-
-`useExisting` ensures that the single `NgrxArrowStateManager` instance is shared between both direct injection and `ARROW_STATE_MANAGER` token resolution — so the `effect()` only runs once.
 
 No changes are needed in the template — the `ngxArrowState` directive resolves the token automatically via Angular's DI.
 
 ### Displaying history
 
-The template exports the directive reference to render the live history list:
+The template exports each directive reference to render a live history list per control:
 
 ```html
-<textarea
-  formControlName="message"
-  ngxArrowState
-  #controlState="ngxArrowState"
-  ngxSubmitOnCtrlEnter
-></textarea>
+<input type="text" formControlName="subject" ngxArrowState #subjectState="ngxArrowState" />
+<input type="text" formControlName="message" ngxArrowState #messageState="ngxArrowState" />
 
-@for (item of controlState.stateManager.history; track $index) {
+@for (item of subjectState.stateManager.history; track $index) {
+<mat-list-item>{{ item }}</mat-list-item>
+} @for (item of messageState.stateManager.history; track $index) {
 <mat-list-item>{{ item }}</mat-list-item>
 }
 ```
@@ -135,5 +143,6 @@ The template exports the directive reference to render the live history list:
 | State manager        | `DefaultArrowStateManager` | `ElfArrowStateManager`                     | `NgrxArrowStateManager`                 |
 | Storage              | In-memory (per instance)   | `localStorage` via elf                     | `localStorage` via `effect()`           |
 | Survives page reload | ❌                         | ✅                                         | ✅                                      |
+| Isolated per control | ✅                         | ✅                                         | ✅                                      |
 | Reactive primitives  | Plain array                | elf observable store                       | NgRx `signalState` + Angular `effect()` |
 | Extra dependencies   | None                       | `@ngneat/elf`, `@ngneat/elf-persist-state` | `@ngrx/signals`                         |
