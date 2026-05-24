@@ -131,7 +131,81 @@ For the best chat/prompt experience, use both directives together:
 ></textarea>
 ```
 
-## State Management
+## Signal Forms
+
+### When to use `ngxArrowStateSignal` vs `ngxArrowState`
+
+| | `ngxArrowState` | `ngxArrowStateSignal` |
+|---|---|---|
+| Form type | `ReactiveFormsModule` (`FormGroup` / `FormControl`) | Angular Signal Forms (`@angular/forms/signals`) or any plain `<form>` |
+| Imports needed | `ReactiveFormsModule`, `ArrowState` | `ArrowStateSignal` only |
+| `storageKey` source | Derived from `formControlName` | Required `storageKey` input |
+| Value update | Calls `control.setValue()` directly | Emits via `(historyChange)` output — caller updates signal |
+
+### Usage example
+
+```typescript
+// component
+import { Component, signal } from '@angular/core';
+import { ArrowStateSignal } from 'ngx-arrow-state';
+
+@Component({
+  selector: 'app-chat',
+  imports: [ArrowStateSignal],
+  template: `
+    <form (submit)="ask()">
+      <textarea
+        ngxArrowStateSignal
+        storageKey="my-form-prompt"
+        (historyChange)="promptState.update(s => ({ ...s, prompt: $event }))"
+        [value]="promptState().prompt"
+      ></textarea>
+      <button type="submit">Ask</button>
+    </form>
+  `,
+})
+export class ChatComponent {
+  readonly promptState = signal({ prompt: '' });
+
+  ask() {
+    console.log(this.promptState().prompt);
+  }
+}
+```
+
+The `(historyChange)` output emits the history entry to navigate to. The caller is responsible for updating its signal, keeping the directive stateless with respect to form values.
+
+### `storageKey` input
+
+Unlike `ngxArrowState` which derives the storage key from the bound `formControlName`, `ngxArrowStateSignal` requires an explicit `storageKey` input:
+
+```html
+<textarea
+  ngxArrowStateSignal
+  storageKey="message-editor"
+  (historyChange)="onHistoryChange($event)"
+></textarea>
+```
+
+The key is passed to `stateManager.init?(storageKey)` in `ngOnInit` so the manager can lazily create its named backing store.
+
+### Token injection
+
+The **same `ARROW_STATE_MANAGER_FACTORY` token** works for both `ngxArrowState` and `ngxArrowStateSignal`. Provide it at component level and both directives will use it:
+
+```typescript
+@Component({
+  providers: [
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new MyArrowStateManager(),
+    },
+  ],
+})
+export class AppComponent {}
+```
+
+
 
 By default the directive creates a **`DefaultArrowStateManager` per directive instance** — a simple in-memory array. History is lost on page reload.
 
@@ -400,6 +474,18 @@ Export the directive with `#controlState="ngxArrowState"` to access `stateManage
 | Property       | Type                   | Description                                    |
 | -------------- | ---------------------- | ---------------------------------------------- |
 | `stateManager` | `ArrowStateManager<T>` | The active state manager (injected or default) |
+
+### ArrowStateSignal
+
+| Selector | `input[type="text"][ngxArrowStateSignal], textarea[ngxArrowStateSignal]` |
+| -------- | ----------------------------------------------------------------------- |
+| Export   | `ngxArrowStateSignal`                                                    |
+
+| Property / Output  | Type                   | Description                                               |
+| ------------------ | ---------------------- | --------------------------------------------------------- |
+| `storageKey`       | `InputSignal<string>`  | **Required.** Passed to `stateManager.init?()` on init   |
+| `stateManager`     | `ArrowStateManager<T>` | The active state manager (injected or default)            |
+| `historyChange`    | `OutputEmitterRef<T>`  | Emits the history entry to navigate to (Arrow Up / Down)  |
 
 ### SubmitOnCtrlEnter
 
