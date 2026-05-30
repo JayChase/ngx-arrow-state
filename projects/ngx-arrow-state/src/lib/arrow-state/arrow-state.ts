@@ -6,6 +6,7 @@ import {
   ArrowStateManager,
   DefaultArrowStateManager,
 } from './arrow-state-manager';
+import { shouldChangeState } from './arrow-state-utils';
 
 @Directive({
   selector: 'input[type="text"][ngxArrowState], textarea[ngxArrowState]',
@@ -84,7 +85,7 @@ export class ArrowState<T> implements OnInit, OnDestroy {
 
   onArrowUp(event: Event): void {
     if (this.formControl) {
-      if (this.shouldChangeState('UP')) {
+      if (shouldChangeState(this.elementRef.nativeElement, this.stateManager.history?.length ?? 0, 'UP')) {
         const value = this.stateManager.previous();
         if (value !== undefined) {
           this.formControl.control.setValue(value);
@@ -95,7 +96,7 @@ export class ArrowState<T> implements OnInit, OnDestroy {
 
   onArrowDown(event: Event): void {
     if (this.formControl) {
-      if (this.shouldChangeState('DOWN')) {
+      if (shouldChangeState(this.elementRef.nativeElement, this.stateManager.history?.length ?? 0, 'DOWN')) {
         const value = this.stateManager.next();
         if (value !== undefined) {
           this.formControl.control.setValue(value);
@@ -106,33 +107,5 @@ export class ArrowState<T> implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stateManager.destroy?.();
-  }
-
-  private shouldChangeState(direction: 'UP' | 'DOWN'): boolean {
-    if ((this.stateManager.history?.length ?? 0) < 2) {
-      return false;
-    }
-
-    if (this.elementRef.nativeElement.value.length === 0) {
-      return true;
-    }
-
-    // if the user is selecting text then do not change state
-    if (
-      this.elementRef.nativeElement.selectionStart !== this.elementRef.nativeElement.selectionEnd
-    ) {
-      return false;
-    }
-
-    //if the selectionEnd is the end length of the value
-    if (
-      (direction === 'UP' && this.elementRef.nativeElement.selectionStart === 0) ||
-      (direction === 'DOWN' &&
-        this.elementRef.nativeElement.selectionStart === this.elementRef.nativeElement.value.length)
-    ) {
-      return true;
-    } else {
-      return false;
-    }
   }
 }
