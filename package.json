@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build ngx-arrow-state && ng build demo && ng build elf-demo && ng build ngrx-signal-store-demo",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:demo": "ng serve demo",

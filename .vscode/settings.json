@@ -5,17 +5,8 @@
         "arrowdown"
     ],
     "workbench.colorCustomizations": {
-        "activityBar.background": "#073519",
-        "titleBar.activeBackground": "#094B23",
-        "titleBar.activeForeground": "#F1FDF6",
         "terminal.ansiRed": "#f2bb00",
         "terminal.ansiBrightRed": "#f2bb00",
-        "titleBar.inactiveBackground": "#073519",
-        "titleBar.inactiveForeground": "#F1FDF6",
-        "statusBar.background": "#073519",
-        "statusBar.foreground": "#F1FDF6",
-        "statusBar.debuggingBackground": "#073519",
-        "statusBar.debuggingForeground": "#F1FDF6",
         "statusBar.noFolderBackground": "#073519",
         "statusBar.noFolderForeground": "#F1FDF6"
     }
