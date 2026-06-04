@@ -1,21 +1,20 @@
 # ngx-arrow-state
 
-An Angular library that provides AI chat style input history navigation using arrow keys, plus Ctrl+Enter form submission for textareas.
+[![CI](https://github.com/JayChase/ngx-arrow-state/actions/workflows/ci.yml/badge.svg)](https://github.com/JayChase/ngx-arrow-state/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/ngx-arrow-state.svg)](https://www.npmjs.com/package/ngx-arrow-state)
+
+An Angular library that provides AI chat style input history navigation using arrow keys, and Ctrl+Enter form submission.
 
 Improve UX for chat interfaces, command-line style inputs, and AI prompt interfaces by letting users:
 
 - ⬆️ **Arrow Up** - Navigate to previous input values
 - ⬇️ **Arrow Down** - Navigate to next input values
-- ⌨️ **Ctrl+Enter** - Submit forms from textareas (since Enter creates newlines)
-
-## TL;DR
-
-Go straight to the demo on [StackBlitz](https://stackblitz.com/edit/ngx-arrow-state-demo?file=src%2Fapp%2Fapp.html)
+- ⌨️ **Ctrl+Enter** - Submit forms from textarea inputs (since Enter creates newlines)
 
 ## Features
 
 - Works with both `<input type="text">` and `<textarea>` elements
-- Smart cursor detection for textareas (only navigates history when cursor is at start/end)
+- Smart cursor detection for textarea inputs (only navigates history when cursor is at start/end)
 - Circular history navigation
 - Pluggable state management via IoC — use the built-in in-memory store, or bring your own (e.g. `@ngneat/elf`)
 - Standalone directives (no module required)
@@ -32,7 +31,7 @@ npm i -S ngx-arrow-state
 
 | Angular Version | Package Version |
 | --------------- | --------------- |
-| 21.x            | ^1.0.0          |
+| 21.x            | 0.0.x           |
 
 ## Usage
 
@@ -85,7 +84,7 @@ This allows users to navigate multi-line text normally while still accessing his
 
 ### SubmitOnCtrlEnter Directive
 
-Add the `ngxSubmitOnCtrlEnter` directive to enable form submission with Ctrl+Enter. This is especially useful for textareas where Enter creates a new line.
+Add the `ngxSubmitOnCtrlEnter` directive to enable form submission with Ctrl+Enter. This is especially useful for textarea inputs where Enter creates a new line.
 
 ```typescript
 import { Component } from '@angular/core';
@@ -132,7 +131,81 @@ For the best chat/prompt experience, use both directives together:
 ></textarea>
 ```
 
-## State Management
+## Signal Forms
+
+### When to use `ngxArrowStateSignal` vs `ngxArrowState`
+
+| | `ngxArrowState` | `ngxArrowStateSignal` |
+|---|---|---|
+| Form type | `ReactiveFormsModule` (`FormGroup` / `FormControl`) | Angular Signal Forms (`@angular/forms/signals`) or any plain `<form>` |
+| Imports needed | `ReactiveFormsModule`, `ArrowState` | `ArrowStateSignal` only |
+| `storageKey` source | Derived from `formControlName` | Required `storageKey` input |
+| Value update | Calls `control.setValue()` directly | Emits via `(historyChange)` output — caller updates signal |
+
+### Usage example
+
+```typescript
+// component
+import { Component, signal } from '@angular/core';
+import { ArrowStateSignal } from 'ngx-arrow-state';
+
+@Component({
+  selector: 'app-chat',
+  imports: [ArrowStateSignal],
+  template: `
+    <form (submit)="ask()">
+      <textarea
+        ngxArrowStateSignal
+        storageKey="my-form-prompt"
+        (historyChange)="promptState.update(s => ({ ...s, prompt: $event }))"
+        [value]="promptState().prompt"
+      ></textarea>
+      <button type="submit">Ask</button>
+    </form>
+  `,
+})
+export class ChatComponent {
+  readonly promptState = signal({ prompt: '' });
+
+  ask() {
+    console.log(this.promptState().prompt);
+  }
+}
+```
+
+The `(historyChange)` output emits the history entry to navigate to. The caller is responsible for updating its signal, keeping the directive stateless with respect to form values.
+
+### `storageKey` input
+
+Unlike `ngxArrowState` which derives the storage key from the bound `formControlName`, `ngxArrowStateSignal` requires an explicit `storageKey` input:
+
+```html
+<textarea
+  ngxArrowStateSignal
+  storageKey="message-editor"
+  (historyChange)="onHistoryChange($event)"
+></textarea>
+```
+
+The key is passed to `stateManager.init?(storageKey)` in `ngOnInit` so the manager can lazily create its named backing store.
+
+### Token injection
+
+The **same `ARROW_STATE_MANAGER_FACTORY` token** works for both `ngxArrowState` and `ngxArrowStateSignal`. Provide it at component level and both directives will use it:
+
+```typescript
+@Component({
+  providers: [
+    {
+      provide: ARROW_STATE_MANAGER_FACTORY,
+      useValue: () => new MyArrowStateManager(),
+    },
+  ],
+})
+export class AppComponent {}
+```
+
+
 
 By default the directive creates a **`DefaultArrowStateManager` per directive instance** — a simple in-memory array. History is lost on page reload.
 
@@ -217,11 +290,6 @@ export class ElfArrowStateManager implements ArrowStateManager<string> {
   private store!: ReturnType<typeof createStore>;
   private persistence!: ReturnType<typeof persistState>;
 
-  /**
-   * Called by the directive in ngOnInit.
-   * Lazily creates a named Elf store + localStorage persistence
-   * under `arrow-state:<controlName>` so every control is isolated.
-   */
   init(storageKey: string): void {
     this.store = createStore(
       { name: `arrow-state:${storageKey}` },
@@ -315,12 +383,8 @@ export class NgrxArrowStateManager implements ArrowStateManager<string> {
     });
   }
 
-  /**
-   * Called by the directive in ngOnInit.
-   * Sets a per-control storage key and hydrates history from localStorage.
-   */
   init(storageKey: string): void {
-    this.storageKey = `ngrx-arrow-state:${controlName}`;
+    this.storageKey = `ngrx-arrow-state:${storageKey}`;
     const saved = this.loadFromStorage();
     if (saved.length) {
       patchState(this.state, { history: saved });
@@ -387,6 +451,18 @@ export class AppComponent {}
 
 No changes are needed in the template — the directive picks up the provider automatically.
 
+### Displaying history in a template
+
+Export the directive with `#controlState="ngxArrowState"` to access `stateManager.history`:
+
+```html
+<input type="text" formControlName="message" ngxArrowState #messageState="ngxArrowState" />
+
+@for (item of messageState.stateManager.history; track $index) {
+<div>{{ item }}</div>
+}
+```
+
 ## API Reference
 
 ### ArrowState
@@ -398,6 +474,18 @@ No changes are needed in the template — the directive picks up the provider au
 | Property       | Type                   | Description                                    |
 | -------------- | ---------------------- | ---------------------------------------------- |
 | `stateManager` | `ArrowStateManager<T>` | The active state manager (injected or default) |
+
+### ArrowStateSignal
+
+| Selector | `input[type="text"][ngxArrowStateSignal], textarea[ngxArrowStateSignal]` |
+| -------- | ----------------------------------------------------------------------- |
+| Export   | `ngxArrowStateSignal`                                                    |
+
+| Property / Output  | Type                   | Description                                               |
+| ------------------ | ---------------------- | --------------------------------------------------------- |
+| `storageKey`       | `InputSignal<string>`  | **Required.** Passed to `stateManager.init?()` on init   |
+| `stateManager`     | `ArrowStateManager<T>` | The active state manager (injected or default)            |
+| `historyChange`    | `OutputEmitterRef<T>`  | Emits the history entry to navigate to (Arrow Up / Down)  |
 
 ### SubmitOnCtrlEnter
 
