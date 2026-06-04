@@ -33,6 +33,8 @@ npm i -S ngx-arrow-state
 | --------------- | --------------- |
 | 22.x            | 0.0.x           |
 
+For Angular 21 and earlier, use the last `ngx-arrow-state` release published before Angular 22 support.
+
 ## Usage
 
 ### ArrowState Directive
