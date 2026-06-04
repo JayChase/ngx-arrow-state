@@ -31,7 +31,8 @@ npm i -S ngx-arrow-state
 
 | Angular Version | Package Version |
 | --------------- | --------------- |
-| 22.x            | 0.0.x           |
+| 22.x            | 5.0.x           |
+| 21.x            | 4.0.x           |
 
 For Angular 21 and earlier, use the last `ngx-arrow-state` release published before Angular 22 support.
 

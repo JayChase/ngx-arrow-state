@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng s --ssl demo --host 0.0.0.0  --port 4200",
     "build": "ng build ngx-arrow-state && ng build demo && ng build elf-demo && ng build ngrx-signal-store-demo",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:demo": "ng serve demo",
-    "serve:elf-demo": "ng serve elf-demo",
-    "serve:ngrx-signal-store-demo": "ng serve ngrx-signal-store-demo"
+    "serve:demo": "ng s demo --ssl  --host 0.0.0.0  --port 4200",
+    "serve:elf-demo": "ng s --ssl elf-demo --host 0.0.0.0  --port 4200",
+    "serve:ngrx-signal-store-demo": "ng s --ssl ngrx-signal-store-demo --host 0.0.0.0  --port 4200"
   },
   "prettier": {
     "printWidth": 100,
