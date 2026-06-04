@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ArrowState } from './arrow-state';
@@ -14,6 +14,7 @@ import {
       <input type="text" formControlName="textInput" ngxArrowState />
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ReactiveFormsModule, ArrowState],
 })
 class TestInputComponent {
@@ -32,6 +33,7 @@ class TestInputComponent {
       <textarea formControlName="textArea" ngxArrowState></textarea>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ReactiveFormsModule, ArrowState],
 })
 class TestTextareaComponent {
@@ -324,6 +326,7 @@ class SpyArrowStateManager<T = unknown> implements ArrowStateManager<T> {
       <input type="text" formControlName="textInput" ngxArrowState />
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ReactiveFormsModule, ArrowState],
 })
 class TestCustomManagerComponent {

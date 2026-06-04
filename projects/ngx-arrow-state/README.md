@@ -31,7 +31,7 @@ npm i -S ngx-arrow-state
 
 | Angular Version | Package Version |
 | --------------- | --------------- |
-| 21.x            | 0.0.x           |
+| 22.x            | 0.0.x           |
 
 ## Usage
 
@@ -525,7 +525,7 @@ In-memory implementation used automatically when neither `ARROW_STATE_MANAGER` n
 
 ## Requirements
 
-- Angular 21+
+- Angular 22+
 - `@angular/forms` (ReactiveFormsModule)
 
 ## Development
