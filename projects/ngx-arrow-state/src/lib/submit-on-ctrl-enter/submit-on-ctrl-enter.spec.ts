@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { SubmitOnCtrlEnter } from './submit-on-ctrl-enter';
@@ -9,6 +9,7 @@ import { SubmitOnCtrlEnter } from './submit-on-ctrl-enter';
       <input type="text" formControlName="textInput" ngxSubmitOnCtrlEnter />
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ReactiveFormsModule, SubmitOnCtrlEnter],
 })
 class TestInputComponent {
@@ -27,6 +28,7 @@ class TestInputComponent {
       <textarea formControlName="textArea" ngxSubmitOnCtrlEnter></textarea>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ReactiveFormsModule, SubmitOnCtrlEnter],
 })
 class TestTextareaComponent {

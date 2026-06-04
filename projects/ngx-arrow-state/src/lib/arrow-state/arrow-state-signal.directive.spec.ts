@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ArrowStateSignal } from './arrow-state-signal.directive';
 import {
@@ -22,6 +22,7 @@ import {
       ></textarea>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ArrowStateSignal],
 })
 class TestTextareaComponent {
@@ -48,6 +49,7 @@ class TestTextareaComponent {
       />
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ArrowStateSignal],
 })
 class TestInputComponent {
@@ -318,6 +320,7 @@ describe('ArrowStateSignal — input', () => {
       ></textarea>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ArrowStateSignal],
 })
 class TestCustomManagerComponent {
@@ -419,6 +422,7 @@ describe('ArrowStateSignal — IoC', () => {
       ></textarea>
     </form>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ArrowStateSignal],
 })
 class TestFactoryComponent {
